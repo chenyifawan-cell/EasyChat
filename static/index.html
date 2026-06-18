@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EasyNovel</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>EasyNovel</h1>
+          <p>按大纲、人设和章节目录逐章生成完整小说</p>
+        </div>
+        <div class="actions">
+          <a class="link-button" href="/config.html">配置 API</a>
+          <button id="saveBtn" type="button">保存设定</button>
+          <button id="generateBtn" type="button" class="primary">开始生成</button>
+          <button id="stopBtn" type="button" class="ghost" disabled>暂停</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <div class="editor-grid">
+          <label>
+            <span>故事大纲</span>
+            <textarea id="outline" spellcheck="false"></textarea>
+          </label>
+          <label>
+            <span>人物设定</span>
+            <textarea id="characters" spellcheck="false"></textarea>
+          </label>
+          <label>
+            <span>章节目录</span>
+            <textarea id="chapters" spellcheck="false"></textarea>
+          </label>
+          <label>
+            <span>写作风格</span>
+            <textarea id="style" spellcheck="false"></textarea>
+          </label>
+        </div>
+
+        <aside class="side-panel">
+          <section class="panel">
+            <h2>模型配置</h2>
+            <label class="field">
+              <span>选择已保存配置</span>
+              <select id="profileSelect"></select>
+            </label>
+            <p class="muted" id="profileInfo">请先到配置页保存一个模型配置。</p>
+          </section>
+
+          <section class="panel">
+            <h2>生成参数</h2>
+            <label class="field">
+              <span>每章目标字数</span>
+              <input id="targetWords" type="number" min="500" step="500" value="3000" />
+            </label>
+            <label class="field">
+              <span>自动修订次数</span>
+              <input id="maxRevisions" type="number" min="0" max="3" step="1" value="1" />
+            </label>
+            <label class="field">
+              <span>创作自由度</span>
+              <input id="temperature" type="number" min="0" max="1.5" step="0.05" value="0.75" />
+            </label>
+          </section>
+
+          <section class="panel status-panel">
+            <h2>进度</h2>
+            <div class="progress">
+              <div id="progressBar"></div>
+            </div>
+            <p id="statusText">等待开始</p>
+            <pre id="logs"></pre>
+          </section>
+
+          <section class="panel">
+            <h2>输出</h2>
+            <button id="loadOutputBtn" type="button">查看成稿</button>
+            <button id="downloadBtn" type="button">下载 Markdown</button>
+          </section>
+        </aside>
+      </section>
+
+      <section class="output-panel">
+        <h2>成稿预览</h2>
+        <textarea id="output" readonly spellcheck="false"></textarea>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

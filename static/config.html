@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EasyNovel - API 配置</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell config-shell">
+      <header class="topbar">
+        <div>
+          <h1>API 配置</h1>
+          <p>测试连通性、获取模型、设置推理深度</p>
+        </div>
+        <div class="actions">
+          <a class="link-button" href="/">返回主页面</a>
+          <button id="saveBtn" type="button" class="primary">保存配置</button>
+          <button id="testBtn" type="button">测试连接</button>
+          <button id="fetchModelsBtn" type="button">获取模型</button>
+        </div>
+      </header>
+
+      <section class="single-column">
+        <section class="panel">
+          <h2>接口配置</h2>
+          <div class="two-fields">
+            <label class="field">
+              <span>配置名称</span>
+              <input id="profileName" type="text" placeholder="默认配置" />
+            </label>
+            <label class="field">
+              <span>接口风格</span>
+              <select id="apiStyle">
+                <option value="chat">Chat Completions</option>
+                <option value="responses">Responses</option>
+                <option value="anthropic">Anthropic / Authpic</option>
+              </select>
+            </label>
+          </div>
+          <div class="two-fields">
+            <label class="field">
+              <span>Base URL</span>
+              <input id="baseUrl" type="text" value="https://api.openai.com/v1" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>模型</span>
+              <input id="model" type="text" value="gpt-4.1-mini" autocomplete="off" />
+            </label>
+          </div>
+          <label class="field">
+            <span>API Key</span>
+            <input id="apiKey" type="password" autocomplete="off" />
+          </label>
+          <div class="two-fields">
+            <label class="field">
+              <span>最大输出 token</span>
+              <input id="maxTokens" type="number" min="1" step="512" value="8192" />
+            </label>
+            <label class="field">
+              <span>超时秒数</span>
+              <input id="timeout" type="number" min="30" step="30" value="180" />
+            </label>
+          </div>
+          <div class="two-fields">
+            <label class="field">
+              <span>推理深度</span>
+              <select id="reasoningDepth">
+                <option value="none">无</option>
+                <option value="low">低</option>
+                <option value="medium">中</option>
+                <option value="high">高</option>
+              </select>
+            </label>
+            <label class="field" id="anthropicVersionField">
+              <span>Anthropic Version</span>
+              <input id="anthropicVersion" type="text" value="2023-06-01" autocomplete="off" />
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>已保存配置</h2>
+          <div class="profile-list" id="profileList"></div>
+        </section>
+
+        <section class="panel">
+          <h2>状态</h2>
+          <p id="statusText">等待操作</p>
+          <pre id="logs"></pre>
+        </section>
+      </section>
+    </main>
+    <script src="/static/config.js"></script>
+  </body>
+</html>
