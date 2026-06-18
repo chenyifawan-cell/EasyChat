@@ -100,17 +100,129 @@ h1 {
   justify-content: flex-end;
 }
 
-.workspace {
+.settings-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
   align-items: start;
 }
 
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab-button {
+  min-height: 40px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
+}
+
+.tab-button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.model-strip {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  margin: -4px 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 12px 14px;
+}
+
+.model-select-field {
+  display: grid;
+  min-width: min(420px, 100%);
+  gap: 6px;
+}
+
+.model-select-field span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.model-strip #profileInfo {
+  padding-bottom: 8px;
+}
+
+.planner-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+  gap: 14px;
+}
+
+.planner-brief {
+  display: flex;
+  min-height: 420px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.planner-brief span {
+  padding: 12px 12px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+#plannerInput {
+  min-height: 360px;
+}
+
+.config-prompt {
+  min-height: 140px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.planner-actions {
+  display: grid;
+  grid-template-columns: 1fr 112px 76px;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.plan-preview {
+  min-height: 368px;
+  max-height: 460px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--ink);
+  white-space: pre-wrap;
+  line-height: 1.55;
+  padding: 10px;
+}
+
 .editor-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.wide-editor {
+  grid-column: 1 / -1;
 }
 
 .editor-grid label,
@@ -155,6 +267,16 @@ textarea {
   gap: 14px;
 }
 
+.generate-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 16px;
+}
+
+.generate-layout .output-panel {
+  grid-column: 1 / -1;
+}
+
 .panel {
   padding: 14px;
 }
@@ -177,6 +299,12 @@ select {
   border-radius: 6px;
   background: #ffffff;
   padding: 8px 10px;
+}
+
+.input-with-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  gap: 8px;
 }
 
 .two-fields {
@@ -293,13 +421,27 @@ select {
 
 @media (max-width: 980px) {
   .topbar,
-  .workspace {
+  .settings-layout,
+  .generate-layout {
     grid-template-columns: 1fr;
     display: grid;
   }
 
   .actions {
     justify-content: start;
+  }
+
+  .model-strip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .model-strip #profileInfo {
+    padding-bottom: 0;
+  }
+
+  .planner-layout {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -313,7 +455,19 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .wide-editor {
+    grid-column: auto;
+  }
+
   .editor-grid label {
     min-height: 260px;
+  }
+
+  .planner-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    overflow-x: auto;
   }
 }

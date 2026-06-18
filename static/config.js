@@ -1,4 +1,4 @@
-const profileFields = ["profileName", "apiStyle", "baseUrl", "model", "apiKey", "maxTokens", "timeout", "reasoningDepth", "anthropicVersion"];
+const profileFields = ["profileName", "apiStyle", "baseUrl", "model", "apiKey", "systemPrompt", "maxTokens", "timeout", "reasoningDepth", "anthropicVersion"];
 const $cfg = (id) => document.getElementById(id);
 const defaultsByStyle = {
   chat: { baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini" },
@@ -35,6 +35,7 @@ function collectProfile() {
     baseUrl: $cfg("baseUrl").value.trim(),
     model: $cfg("model").value.trim(),
     apiKey: $cfg("apiKey").value.trim(),
+    systemPrompt: $cfg("systemPrompt").value.trim(),
     maxTokens: Number($cfg("maxTokens").value || 8192),
     timeout: Number($cfg("timeout").value || 180),
     reasoningDepth: $cfg("reasoningDepth").value,
@@ -48,6 +49,7 @@ function fillForm(profile) {
   $cfg("baseUrl").value = profile.baseUrl || defaultsByStyle.chat.baseUrl;
   $cfg("model").value = profile.model || defaultsByStyle.chat.model;
   $cfg("apiKey").value = profile.apiKey || "";
+  $cfg("systemPrompt").value = profile.systemPrompt || "";
   $cfg("maxTokens").value = profile.maxTokens || 8192;
   $cfg("timeout").value = profile.timeout || 180;
   $cfg("reasoningDepth").value = profile.reasoningDepth || "none";

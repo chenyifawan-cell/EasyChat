@@ -21,52 +21,89 @@
         </div>
       </header>
 
-      <section class="workspace">
-        <div class="editor-grid">
-          <label>
-            <span>故事大纲</span>
-            <textarea id="outline" spellcheck="false"></textarea>
-          </label>
-          <label>
-            <span>人物设定</span>
-            <textarea id="characters" spellcheck="false"></textarea>
-          </label>
-          <label>
-            <span>章节目录</span>
-            <textarea id="chapters" spellcheck="false"></textarea>
-          </label>
-          <label>
-            <span>写作风格</span>
-            <textarea id="style" spellcheck="false"></textarea>
-          </label>
+      <nav class="tabs" aria-label="主功能">
+        <button class="tab-button active" type="button" data-tab="plannerTab">AI 助手</button>
+        <button class="tab-button" type="button" data-tab="settingsTab">小说设定</button>
+        <button class="tab-button" type="button" data-tab="generateTab">生成输出</button>
+      </nav>
+
+      <section class="model-strip">
+        <label class="model-select-field">
+          <span>当前模型配置</span>
+          <select id="profileSelect"></select>
+        </label>
+        <p class="muted" id="profileInfo">请先到配置页保存一个模型配置。</p>
+      </section>
+
+      <section id="plannerTab" class="tab-panel active">
+        <div class="panel">
+          <h2>AI 设定助手</h2>
+          <div class="planner-layout">
+            <label class="planner-brief">
+              <span>小说需求</span>
+              <textarea id="plannerInput" placeholder="告诉 AI 你想写什么：题材、主角、世界观、章节数、风格、禁忌..." spellcheck="false"></textarea>
+            </label>
+            <div>
+              <div class="planner-actions">
+                <button id="plannerSendBtn" type="button" class="primary">生成设定</button>
+                <button id="importPlanBtn" type="button">一键导入</button>
+                <button id="clearPlannerBtn" type="button">清空</button>
+              </div>
+              <pre id="planPreview" class="plan-preview">生成后会在这里预览大纲、人物设定和章节目录。</pre>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <aside class="side-panel">
-          <section class="panel">
-            <h2>模型配置</h2>
-            <label class="field">
-              <span>选择已保存配置</span>
-              <select id="profileSelect"></select>
+      <section id="settingsTab" class="tab-panel">
+        <div class="settings-layout">
+          <div class="editor-grid">
+            <label>
+              <span>故事大纲</span>
+              <textarea id="outline" spellcheck="false"></textarea>
             </label>
-            <p class="muted" id="profileInfo">请先到配置页保存一个模型配置。</p>
-          </section>
+            <label>
+              <span>人物设定</span>
+              <textarea id="characters" spellcheck="false"></textarea>
+            </label>
+            <label>
+              <span>章节目录</span>
+              <textarea id="chapters" spellcheck="false"></textarea>
+            </label>
+            <label>
+              <span>写作风格</span>
+              <textarea id="style" spellcheck="false"></textarea>
+            </label>
+          </div>
+          <aside class="side-panel">
+            <section class="panel">
+              <h2>生成参数</h2>
+              <label class="field">
+                <span>每章目标字数</span>
+                <div class="input-with-button">
+                  <input id="targetWords" type="number" min="500" max="20000" step="500" value="3000" />
+                  <button id="maxWordsBtn" type="button">最大</button>
+                </div>
+              </label>
+              <label class="field">
+                <span>自动修订次数</span>
+                <input id="maxRevisions" type="number" min="0" max="3" step="1" value="1" />
+              </label>
+              <label class="field">
+                <span>携带最近章节数</span>
+                <input id="recentChapterCount" type="number" min="0" max="10" step="1" value="3" />
+              </label>
+              <label class="field">
+                <span>创作自由度</span>
+                <input id="temperature" type="number" min="0" max="1.5" step="0.05" value="0.75" />
+              </label>
+            </section>
+          </aside>
+        </div>
+      </section>
 
-          <section class="panel">
-            <h2>生成参数</h2>
-            <label class="field">
-              <span>每章目标字数</span>
-              <input id="targetWords" type="number" min="500" step="500" value="3000" />
-            </label>
-            <label class="field">
-              <span>自动修订次数</span>
-              <input id="maxRevisions" type="number" min="0" max="3" step="1" value="1" />
-            </label>
-            <label class="field">
-              <span>创作自由度</span>
-              <input id="temperature" type="number" min="0" max="1.5" step="0.05" value="0.75" />
-            </label>
-          </section>
-
+      <section id="generateTab" class="tab-panel">
+        <div class="generate-layout">
           <section class="panel status-panel">
             <h2>进度</h2>
             <div class="progress">
@@ -75,18 +112,16 @@
             <p id="statusText">等待开始</p>
             <pre id="logs"></pre>
           </section>
-
           <section class="panel">
             <h2>输出</h2>
             <button id="loadOutputBtn" type="button">查看成稿</button>
             <button id="downloadBtn" type="button">下载 Markdown</button>
           </section>
-        </aside>
-      </section>
-
-      <section class="output-panel">
-        <h2>成稿预览</h2>
-        <textarea id="output" readonly spellcheck="false"></textarea>
+          <section class="output-panel">
+            <h2>成稿预览</h2>
+            <textarea id="output" readonly spellcheck="false"></textarea>
+          </section>
+        </div>
       </section>
     </main>
     <script src="/static/app.js"></script>

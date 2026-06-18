@@ -98,6 +98,35 @@ def parse_chapters(chapters_text: str) -> list[dict[str, str]]:
     return chapters
 
 
+def extract_json_object(text: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    match = re.search(r"\{.*\}", text, re.S)
+    if not match:
+        raise RuntimeError("AI 没有返回可解析的 JSON。")
+    parsed = json.loads(match.group(0))
+    if not isinstance(parsed, dict):
+        raise RuntimeError("AI 返回的 JSON 不是对象。")
+    return parsed
+
+
+def normalize_story_plan(data: dict[str, Any]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for key in PROJECT_FILES:
+        value = data.get(key, "")
+        if isinstance(value, list):
+            value = "\n".join(str(item) for item in value)
+        elif isinstance(value, dict):
+            value = json.dumps(value, ensure_ascii=False, indent=2)
+        result[key] = str(value).strip()
+    return result
+
+
 @dataclass
 class ApiConfig:
     style: str
@@ -108,6 +137,7 @@ class ApiConfig:
     max_tokens: int
     anthropic_version: str
     reasoning_depth: str
+    system_prompt: str
 
     @classmethod
     def from_options(cls, options: dict[str, Any]) -> "ApiConfig":
@@ -123,6 +153,7 @@ class ApiConfig:
             max_tokens=int(options.get("maxTokens") or os.getenv("OPENAI_MAX_TOKENS") or 8192),
             anthropic_version=str(options.get("anthropicVersion") or os.getenv("ANTHROPIC_VERSION") or "2023-06-01").strip(),
             reasoning_depth=normalize_reasoning_depth(str(options.get("reasoningDepth") or os.getenv("REASONING_DEPTH") or "none")),
+            system_prompt=str(options.get("systemPrompt") or os.getenv("SYSTEM_PROMPT") or "").strip(),
         )
 
 
@@ -184,6 +215,20 @@ def extract_response_text(result: dict[str, Any], style: str) -> str:
     return "\n".join(parts).strip()
 
 
+def apply_system_prompt(messages: list[dict[str, str]], api_config: ApiConfig) -> list[dict[str, str]]:
+    prompt = api_config.system_prompt.strip()
+    if not prompt:
+        return messages
+
+    prepared = [dict(message) for message in messages]
+    prefix = f"以下是模型配置中的全局 Prompt。所有 API 调用都必须首先遵守它；如果它与后续任务描述冲突，优先遵守全局 Prompt。\n\n【全局 Prompt】\n{prompt}"
+    for message in prepared:
+        if message.get("role") == "system":
+            message["content"] = f"{prefix}\n\n【当前任务系统设定】\n{message.get('content', '')}"
+            return prepared
+    return [{"role": "system", "content": prefix}, *prepared]
+
+
 def chat_completion(messages: list[dict[str, str]], api_config: ApiConfig, temperature: float = 0.7) -> str:
     if os.getenv("NOVEL_MOCK") == "1":
         return mock_completion(messages)
@@ -191,6 +236,7 @@ def chat_completion(messages: list[dict[str, str]], api_config: ApiConfig, tempe
     if not api_config.api_key:
         raise RuntimeError("请先在页面填写 API Key。")
 
+    messages = apply_system_prompt(messages, api_config)
     payload = build_payload(messages, api_config, temperature)
     endpoint = api_endpoint(api_config)
     headers = api_headers(api_config)
@@ -226,6 +272,7 @@ def test_api_config(api_config: ApiConfig) -> str:
         max_tokens=min(api_config.max_tokens, 64),
         anthropic_version=api_config.anthropic_version,
         reasoning_depth="none",
+        system_prompt=api_config.system_prompt,
     )
     return chat_completion(
         [
@@ -268,6 +315,48 @@ def list_models(api_config: ApiConfig) -> list[str]:
     return sorted(models)
 
 
+def plan_story(options: dict[str, Any]) -> dict[str, str]:
+    api_config = ApiConfig.from_options(options)
+    messages = options.get("messages") or []
+    if not isinstance(messages, list) or not messages:
+        raise RuntimeError("请先输入你想写的小说想法。")
+
+    existing = options.get("currentProject") or {}
+    if not isinstance(existing, dict):
+        existing = {}
+
+    user_messages = []
+    for item in messages[-20:]:
+        if isinstance(item, dict) and item.get("role") in {"user", "assistant"}:
+            user_messages.append({"role": item["role"], "content": str(item.get("content", ""))})
+
+    prompt = f"""请根据对话内容，为一个长篇小说生成可直接导入写作工具的设定。
+
+必须只返回 JSON 对象，不要使用 Markdown，不要添加解释。
+JSON 字段必须是：
+- outline：故事大纲，包含开端、主线目标、主要矛盾、中段转折、高潮、结局方向
+- characters：人物设定，包含姓名、身份、性格、动机、关系、秘密、禁止改变的设定
+- chapters：章节目录，每章包含标题、必须写、不能写
+- style：写作风格要求
+
+如果用户没有明确章节数，默认生成 12 章。章节要求要足够具体，能约束后续正文生成不跑题。
+
+【当前页面已有设定，可作为参考，不要无脑覆盖用户明确要求】
+{json.dumps(normalize_story_plan(existing), ensure_ascii=False, indent=2)}
+"""
+
+    raw = chat_completion(
+        [
+            {"role": "system", "content": "你是小说策划助手，擅长把模糊想法整理成可执行的长篇小说设定。"},
+            *user_messages,
+            {"role": "user", "content": prompt},
+        ],
+        api_config,
+        temperature=0.7,
+    )
+    return normalize_story_plan(extract_json_object(raw))
+
+
 def build_payload(messages: list[dict[str, str]], api_config: ApiConfig, temperature: float) -> dict[str, Any]:
     if api_config.style == "chat":
         payload: dict[str, Any] = {
@@ -299,7 +388,7 @@ def build_payload(messages: list[dict[str, str]], api_config: ApiConfig, tempera
         for message in messages
         if message["role"] in {"user", "assistant"}
     ]
-    return {
+    payload = {
         "model": api_config.model,
         "system": "\n\n".join(system_parts),
         "messages": anthropic_messages,
@@ -334,6 +423,16 @@ def api_headers(api_config: ApiConfig) -> dict[str, str]:
 
 def mock_completion(messages: list[dict[str, str]]) -> str:
     text = messages[-1]["content"]
+    if "JSON 字段必须是" in text:
+        return json.dumps(
+            {
+                "outline": "主角收到神秘线索，踏上寻找真相的旅程。中段发现同伴隐瞒身份，结尾揭开旧案并完成自我选择。",
+                "characters": "林舟：谨慎但执拗的主角，动机是寻找母亲失踪真相。\n沈青璃：冷静的关键同伴，隐藏真实身份。",
+                "chapters": "第1章：雨夜来信\n必须写：林舟收到来信并决定出发。\n不能写：不能揭露最终真相。\n\n第2章：旧城旅馆\n必须写：林舟遇见沈青璃。\n不能写：沈青璃不能完全坦白身份。",
+                "style": "悬疑长篇，第三人称有限视角，语言克制，重视细节伏笔。",
+            },
+            ensure_ascii=False,
+        )
     chapter_match = re.search(r"【当前章节】\s*(.*?)\n", text, re.S)
     chapter = chapter_match.group(1).strip() if chapter_match else "测试章节"
     if "请检查这一章是否" in text:
@@ -373,12 +472,14 @@ class NovelGenerator:
         self.job = job
         self.target_words = int(options.get("targetWords") or 3000)
         self.max_revisions = int(options.get("maxRevisions") or 1)
+        self.recent_chapter_count = max(int(options.get("recentChapterCount") or 3), 0)
         self.temperature = float(options.get("temperature") or 0.75)
         self.api_config = ApiConfig.from_options(options)
         self.project = {key: read_text(path).strip() for key, path in PROJECT_FILES.items()}
         self.summary = read_text(SUMMARY_FILE).strip()
         self.state = read_text(STATE_FILE).strip()
         self.chapters = parse_chapters(self.project["chapters"])
+        self.recent_chapter_files: list[Path] = []
         self.job.total = len(self.chapters)
 
     def run(self) -> None:
@@ -401,10 +502,12 @@ class NovelGenerator:
             chapter_file = OUTPUT_DIR / f"chapter-{chapter_number:03d}.md"
             self.job.log(f"正在生成第 {chapter_number}/{self.job.total} 章：{chapter['title']}")
 
-            content = self.generate_chapter(chapter)
+            recent_context = self.recent_chapters_context()
+            content = self.generate_chapter(chapter, recent_context)
             content = self.revise_until_pass(chapter, content)
             write_text(chapter_file, content.strip() + "\n")
             generated_files.append(chapter_file)
+            self.recent_chapter_files.append(chapter_file)
 
             self.summary = self.update_summary(chapter, content)
             self.state = self.update_state(chapter, content)
@@ -416,7 +519,21 @@ class NovelGenerator:
         self.job.finished_at = time.time()
         self.job.log(f"整本小说已生成：{NOVEL_FILE}")
 
-    def generate_chapter(self, chapter: dict[str, str]) -> str:
+    def recent_chapters_context(self) -> str:
+        if self.recent_chapter_count <= 0:
+            return "未启用最近章节正文。"
+        files = self.recent_chapter_files[-self.recent_chapter_count :]
+        if not files:
+            return "暂无，这是第一章。"
+
+        parts: list[str] = []
+        for path in files:
+            content = read_text(path).strip()
+            if content:
+                parts.append(f"【{path.stem}】\n{content}")
+        return "\n\n".join(parts) if parts else "暂无，这是第一章。"
+
+    def generate_chapter(self, chapter: dict[str, str], recent_context: str) -> str:
         prompt = f"""你是长篇小说写作助手。
 
 你必须严格遵守以下规则：
@@ -443,6 +560,9 @@ class NovelGenerator:
 
 【已发生剧情摘要】
 {self.summary or "暂无，这是第一章。"}
+
+【最近 {self.recent_chapter_count} 章正文】
+{recent_context}
 
 【当前人物状态】
 {self.state or "以人物设定为准。"}
@@ -478,6 +598,7 @@ class NovelGenerator:
         return revised
 
     def check_chapter(self, chapter: dict[str, str], content: str) -> str:
+        recent_context = self.recent_chapters_context()
         prompt = f"""请检查这一章是否：
 1. 偏离故事大纲
 2. 违反人物设定
@@ -500,6 +621,9 @@ class NovelGenerator:
 【已发生剧情摘要】
 {self.summary or "暂无"}
 
+【最近 {self.recent_chapter_count} 章正文】
+{recent_context}
+
 【当前人物状态】
 {self.state or "以人物设定为准"}
 
@@ -519,6 +643,7 @@ class NovelGenerator:
         )
 
     def revise_chapter(self, chapter: dict[str, str], content: str, issues: str) -> str:
+        recent_context = self.recent_chapters_context()
         prompt = f"""请根据问题清单修订当前章节。必须保留章节正文形式，只输出修订后的小说正文。
 
 【问题清单】
@@ -535,6 +660,9 @@ class NovelGenerator:
 
 【已发生剧情摘要】
 {self.summary or "暂无"}
+
+【最近 {self.recent_chapter_count} 章正文】
+{recent_context}
 
 【当前人物状态】
 {self.state or "以人物设定为准"}
@@ -677,6 +805,11 @@ class Handler(SimpleHTTPRequestHandler):
             data = read_json_body(self)
             models = list_models(ApiConfig.from_options(data))
             json_response(self, {"ok": True, "models": models})
+            return
+        if self.path == "/api/plan":
+            data = read_json_body(self)
+            plan = plan_story(data)
+            json_response(self, {"ok": True, "plan": plan})
             return
         if self.path == "/api/generate":
             data = read_json_body(self)
